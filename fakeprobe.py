@@ -24,6 +24,8 @@ import math
 from scipy import constants
 
 # %matplotlib inline
+hbar = 0.65821188926
+hplanck = hbar * 2 * np.pi
 # -
 
 area_ribbon_5 = (21.3129*57.262)*1e-20 #largo de la celda * ancho de H a H
@@ -51,9 +53,8 @@ def calc_spec2(filename,tau,field):
 ### you need to multiply the output by the area of your system 
 ### It needs: mu and time (arrays), tau and field (floats) 
 ### Returns: energies and absorption (arrays)
-def calc_specOF(time_array, mu_array, tau,field):
+def calc_specOF(time_array, muy, tau, field):
     hbar = 0.65821188926 # in eV fs
-    muy = mu_array
     time = time_array - time_array[0]              #the time needs to start from zero for the damping
     length = muy.shape[0]
     damp = np.exp(-time/tau)
@@ -64,7 +65,7 @@ def calc_specOF(time_array, mu_array, tau,field):
     omegasfs = np.fft.rfftfreq(10*length, delt) * 2 * np.pi
     alphaim =  time[-1] * spec.imag / float(length)
     cross_section = omegas * (-alphaim) * constants.e * 1.0e-20 / constants.c / constants.epsilon_0
-    return omegasfs*hbar, 4*np.pi**3*cross_section, time, mu, mu*damp
+    return omegasfs*hbar, 4*np.pi**3*cross_section, spec
 
 ### This function reads the file 'mu.dat' to return the columns
 ### It needs: the pathway where the file 'mu.dat' is
@@ -133,21 +134,21 @@ e_R5_TDI, s_R5_TDI, t_R5_TDI, mu_R5_TDI, mu_damp_R5_TDI = calc_spec2(workdir+'mu
 plt.plot(t_R5_TDI, mu_R5_TDI)
 plt.plot(t_R5_TDI, mu_damp_R5_TDI)
 plt.xlim(0,10)
-
 # +
-offset = 20.0   # starting offset 
-window = 16.0   # time window to be study (it depends on the energies that we want to study)
+offset = 0.0   # starting offset 
+window = 15.0   # time window to be study (it depends on the energies that we want to study)
 t_i = 0.0       # 
 t_f = 48.0      # Simulated time
-step = 3        #  
+step = 2.35      # see below
 time_step = 0.2 # time step in atomic units from input
 tau = 5         # for damping
 field = 0.0001  # field strength from input
 
+energs = []
+alphas = []
+specs = []
 
-plt.figure(figsize=(8,8))
-plt.xlim(0,5)
-plt.ylim(-0.025,0.15)
+offsets = [offi for offi in np.arange(offset,t_f,step)]
 
 time, mux, muy, muz = readMu(workdir+'muy_R+TDI.dat')  #read the file muy.dat
 #should we add an if to be sure offset < t_f?
@@ -157,22 +158,39 @@ for i in np.arange(offset,t_f,step):                    #loop between the offset
     if offset_calc+window <= t_f:                       #to be sure not to be outside the simulated time
         print(offset_calc)
         time_cut, mu_cut = muCut(time, muy, offset_calc, window, time_step)  #cut dipole moment
-        ener, spec, t, mu, mu_damp = calc_specOF(time_cut, mu_cut, tau,field)                #calc spec of this mu_cut 
-        plt.plot(ener,spec/area_ribbon_5, label='fake-probe '
-                 +'{:.0f}'.format(offset_calc)+' offset '+' window '+'{:.0f}'.format(window))
-#         plt.plot(t, mu, label='mu')
-#         plt.plot(t, mu_damp, label='mu_damp')
+        ener, spec, alpha = calc_specOF(time_cut, mu_cut, tau,field)                #calc spec of this mu_cut
+        energs.append(ener)
+        alphas.append(alpha)
+        specs.append(spec)
+
     else:                                               #when we are outside of the simulated time
         print('STOPPED')                                 
         print('offset '+'{:.0f}'.format(offset)+' +step '+'{:.0f}'.format(i-offset)+' +window '
               +'{:.0f}'.format(window)+' = '+'{:.0f}'.format(window+i)+
               ' and is outside the simulated time of '+ '{:.0f}'.format(t_f)+'fs')
         break
+# -
+from matplotlib.pyplot import cm
+cols = list(cm.rainbow(np.linspace(0,1,len(energs))))
 
-plt.plot(e_R5_TDI,s_R5_TDI/area_ribbon_5, label='R+TDI normal-spec', color='red')
-plt.plot(e_R5,s_R5/area_ribbon_5, label='R normal-spec', color='black')
+plt.figure(figsize=(8,8))
+plt.xlim(0,5)
+plt.ylim(-0.1,0.15)
+for isp in range(len(energs)):
+    plt.plot(energs[isp],specs[isp]/area_ribbon_5, color=cols[isp], label='offset = {:.2f} fs'.format(offsets[isp]))
 plt.legend(loc='upper right')
+plt.title('window length = {:.0f}'.format(window))
+plt.plot(e_R5_TDI,s_R5_TDI/area_ribbon_5, 'k:', lw=5, label='R+TDI normal-spec')
+plt.plot(e_R5,s_R5/area_ribbon_5, 'k--', label='R normal-spec')
 
+
+# +
+# offset is determined to be coincident with the period of the main low energy peak, which modulates
+# the absorption vs. time signal. This way we "catch" the dipole signal always at the same part of the oscillation
+# ot the main peak at 1.77 eV
+
+period = (1/1.77)*hplanck
+print(period)
 # -
 
 
