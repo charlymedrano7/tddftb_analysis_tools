@@ -1,0 +1,38 @@
+ Geometry = GenFormat {
+ <<< "coords.gen"
+ }
+
+Hamiltonian = DFTB {
+  Scc = Yes
+  ReadInitialCharges = No
+   SlaterKosterFiles = Type2FileNames {
+       Prefix ="~/dftb_skf/mio-1-1/"
+       Separator = "-"
+       Suffix = ".skf"
+   }   
+  MaxAngularMomentum {
+    C = "p"
+    H = "s"
+  }
+   KPointsAndWeights = SupercellFolding {
+     1 0 0
+     0 1 0
+     0 0 100 
+     0.0 0.0 0.5
+   }
+}
+
+Analysis {
+   ElectronDynamics = {
+      Steps = 10000
+      TimeStep [au] = 0.2
+      FieldStrength [v/a] = 0.001
+      Perturbation = laser {
+       PolarizationDirection = 0 1 0
+       LaserEnergy [ev] = 6.40 
+       }
+      Populations = Yes
+      WriteFrequency = 50
+  }
+}
+

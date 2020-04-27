@@ -1,0 +1,30 @@
+ Geometry = GenFormat {
+ <<< "coords.gen"
+ }
+
+
+Hamiltonian = DFTB {
+  Scc = Yes
+  ReadInitialCharges = No
+   SlaterKosterFiles = Type2FileNames {
+       Prefix ="~/dftb_skf/mio-1-1/"
+       Separator = "-"
+       Suffix = ".skf"
+   } 
+  MaxAngularMomentum {
+    C = "p"
+    H = "s"
+  }
+  KPointsAndWeights = Klines {
+    1    0.0   0.0  -0.5    # Z
+  100   0.0   0.0   0.5    # Z
+  }
+}
+
+Analysis {
+}
+
+ParserOptions {
+  ParserVersion = 7
+}
+
