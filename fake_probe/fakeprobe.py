@@ -110,6 +110,18 @@ e_R5, s_R5, t_R5, mu_R5, mu_damp_R5 = calc_spec2(workdir+'muy_R.dat',tau, field)
 
 #Ribbon+TDI
 e_R5_TDI, s_R5_TDI, t_R5_TDI, mu_R5_TDI, mu_damp_R5_TDI = calc_spec2(workdir+'muy_R+TDI.dat',tau, field)
+
+# +
+# PLOT 2
+
+tau = 5
+field = 0.0001
+
+#Ribbon
+e_R5_, s_R5_, t_R5_, mu_R5_, mu_damp_R5_ = calc_spec2(workdir+'muy_resol_R.dat',tau, field)
+
+#Ribbon+TDI
+e_R5_TDI_, s_R5_TDI_, t_R5_TDI_, mu_R5_TDI_, mu_damp_R5_TDI_ = calc_spec2(workdir+'muy_resol_R+TDI.dat',tau, field)
 # -
 
 # ### Calibrado
@@ -139,8 +151,8 @@ offset = 0.0   # starting offset
 window = 15.0   # time window to be study (it depends on the energies that we want to study)
 t_i = 0.0       # 
 t_f = 48.0      # Simulated time
-step = 2.35      # see below
-time_step = 0.2 # time step in atomic units from input
+step = 2.35      # see below (hace que no sea necesario rotar)
+time_step = 0.2 # time step in atomic units from input 
 tau = 5         # for damping
 field = 0.0001  # field strength from input
 
@@ -173,15 +185,20 @@ for i in np.arange(offset,t_f,step):                    #loop between the offset
 from matplotlib.pyplot import cm
 cols = list(cm.rainbow(np.linspace(0,1,len(energs))))
 
+# +
 plt.figure(figsize=(8,8))
 plt.xlim(0,5)
 plt.ylim(-0.1,0.15)
 for isp in range(len(energs)):
     plt.plot(energs[isp],specs[isp]/area_ribbon_5, color=cols[isp], label='offset = {:.2f} fs'.format(offsets[isp]))
-plt.legend(loc='upper right')
 plt.title('window length = {:.0f}'.format(window))
 plt.plot(e_R5_TDI,s_R5_TDI/area_ribbon_5, 'k:', lw=5, label='R+TDI normal-spec')
 plt.plot(e_R5,s_R5/area_ribbon_5, 'k--', label='R normal-spec')
+plt.legend(loc='upper right')
+
+
+# plt.plot(e_R5_TDI_,s_R5_TDI_/area_ribbon_5, 'k', lw=2, color='red', label='resol R+TDI normal-spec')
+# plt.plot(e_R5_,s_R5_/area_ribbon_5, 'k--', color='red', label='resol R normal-spec')
 
 
 # +
