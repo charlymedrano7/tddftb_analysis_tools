@@ -1,0 +1,56 @@
+ Geometry = GenFormat {
+ <<< "coords.gen"
+ }
+ Driver = {}
+ Hamiltonian = DFTB {
+   SCC = Yes 
+   SCCTolerance = 1.0e-7
+   MaxSCCIterations = 1
+   Mixer = Broyden {
+     MixingParameter = 0.051
+     InverseJacobiWeight = 0.01
+     MinimalWeight = 1.
+     MaximalWeight = 100000.
+     WeightFactor = 0.01
+   }
+   SlaterKosterFiles = Type2FileNames {
+     Prefix = "/s/dalma/complex/zn-mio/"
+     Separator = "-"
+     Suffix = ".skf"
+   }
+   MaxAngularMomentum = {
+    O = "p"
+    Zn = "d"
+    C = "p"
+    H = "s" 
+  }
+   Charge = 0.0
+   SpinPolarisation = {}
+   Filling = Fermi {
+     Temperature [k] = 300 
+   }
+   ElectricField = {}
+   OrbitalResolvedSCC = No
+   ReadInitialCharges = Yes 
+   Eigensolver = DivideAndConquer {}
+   OldSKInterpolation = No
+   Dispersion = {}
+   KPointsAndWeights = Klines {
+     1    0.0  0.0  -0.5    # Z
+     100  0.0  0.0   0.5    # Z
+   }
+}
+ Options = {
+   WriteAutotestTag = Yes 
+   WriteDetailedXML = Yes 
+   WriteResultsTag = Yes 
+   WriteDetailedOut = Yes
+   RestartFrequency = 20
+   RandomSeed = 0
+ }
+ ParserOptions = {
+   ParserVersion = 5
+   WriteHSDInput = Yes
+   WriteXMLInput = No
+   StopAfterParsing = No
+ }
