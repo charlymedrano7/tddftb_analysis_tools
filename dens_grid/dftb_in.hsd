@@ -1,0 +1,66 @@
+ Geometry = GenFormat {
+ <<< "geo_in.gen"
+ }
+ Driver = {}
+
+Hamiltonian = DFTB {
+  SCC = Yes
+  SCCTolerance = 1.0E-6
+  MaxSCCIterations = 1500
+  MaxAngularMomentum = {
+    Si = "p"
+    C = "p"
+    N = "p"
+    F = "p"
+    H = "s"
+  }
+    Filling = Fermi {
+    Temperature [K] = 0
+  }
+  ReadInitialCharges = No
+  SlaterKosterFiles = Type2FileNames {
+    Prefix = "~/dftb_skf/pbc-0-3/"
+    Separator = "-"
+    Suffix = ".skf"
+  }
+  Dispersion = LennardJones {
+    Parameters = UFFParameters{}
+  }
+}
+
+ Options = {
+ #  CalculateForces = Yes
+ #  WriteAutotestTag = Yes 
+   WriteDetailedXML = Yes 
+ #  WriteResultsTag = Yes 
+ #  WriteDetailedOut = Yes
+ #  WriteBandOut = Yes
+ #  AtomResolvedEnergies = No
+ #  RestartFrequency = 20
+ #  RandomSeed = 0
+ }
+ ParserOptions = {
+   ParserVersion = 5
+   WriteHSDInput = Yes
+   WriteXMLInput = No
+ #  StopAfterParsing = No
+ }
+ Analysis = {
+   WriteEigenvectors = Yes
+    ElectronDynamics = {
+      Steps = 1000
+      TimeStep [au] = 0.2
+      Populations = Yes
+      Perturbation = Laser {
+	PolarizationDirection = 0.59119755 0.80580867 -0.03402722
+        LaserEnergy [eV] = 2.39
+	}
+      EnvelopeShape = Sin2 {
+	Time1 [fs] = 20
+	}
+      FieldStrength [v/a] = 0.001
+      Pump = Yes
+      PumpProbeFrames = 10
+    }
+ }
+  

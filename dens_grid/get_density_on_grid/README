@@ -1,0 +1,10 @@
+The STO.dat file must to be done by hand based on the respective wfc.hsd file
+
+- The 'STO.pbc_EXAMPLE.dat' file is based on the waveplot file 'wfc.pbc-0-3.hsd'
+
+The flags <Pump> and <PumpProbeFrames> must to be added to the Analysis{} block
+in the dftb_in.hsd file to generate the corresponding the density matrix to a 
+binary file every given number of steps (*ppdump.bin files)
+
+- The user has to declare some paths inside the density_on_grid_timeprop_dftb.py
+ 

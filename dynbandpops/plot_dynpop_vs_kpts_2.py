@@ -21,37 +21,52 @@ import os
 import sys
 import subprocess
 
-root_bands='data_dalma/bands_gs/'
-root_pops='data_dalma/pob/'
-nplotstates = 50
-timeidxs = [50, 200, 300]
-circle_size_factor = 1.0e6
+root_bands='data_dalma/bands_gs/' #path to band.out and detailed.out files
+root_pops='4.17/pob/'             #path to the molpopuls.dat files
+nplotstates = 50                  #number of bands to be plotted
+timeidxs = [50, 200, 300]         #list of time index to be plotted
+circle_size_factor = 1.0e6        #factor for the circles, needed to delta_pops be in the order of 10^3
 
-bandfile = open(root_bands+'band.out', 'r')
+bandfile = open(root_bands+'band.out', 'r')                                    #open and read the band.out
 lines = bandfile.readlines()
-fermiline = subprocess.Popen('grep "Fermi level" '+root_bands+'detailed.out',
+fermiline = subprocess.Popen('grep "Fermi level" '+root_bands+'detailed.out',  #finding the Fermi energy
                              stdout=subprocess.PIPE,shell=True).communicate()
-fermi=float(fermiline[0].split()[4])
-idxs = [i for i in range(len(lines)) if 'KPT' in lines[i]]
+fermi=float(fermiline[0].split()[4])                                           #Fermi energy level
+idxs = [i for i in range(len(lines)) if 'KPT' in lines[i]]                     #indexs line for each Kpoint
 
-nstates = idxs[1]-idxs[0]-2
-nkpt = len(idxs)                  #la mitad de los kpoints del input
-kpts = np.arange(0,nkpt)/(nkpt-1) - 0.5
+nstates = idxs[1]-idxs[0]-2                 #the number of states in each kpoint
+nkpt = len(idxs)                            #the number of indxs is the number of kpoints
+                                            #CAREFUL! nkpt is kpt+1 due to the output band.out
+kpts = np.arange(0,nkpt)/(nkpt-1) - 0.5     #kpoints
 
-bands = np.zeros((nkpt, nstates))
-kweights = np.zeros(nkpt)
+bands = np.zeros((nkpt, nstates),dtype=float)            #bands array 
+kweights = np.zeros(nkpt,dtype=float)                    #kweights
 
 for ik,idx in enumerate(idxs):
-    kweights[ik] = float(lines[idx].split()[5])
-    bands[ik,:] = np.array([float(lines[idx + ist].split()[1]) for ist in range(nstates)])
-bands = bands - fermi
+    kweights[ik] = float(lines[idx].split()[5])               #extracting kweights from band.out lines
+    for ist in range(nstates):
+        bands[ik,ist] = np.array([float(lines[idx+ist+1].split()[1])]) #(+1 cause the output has an empty line)
+                                                              #extracting all the states energies for each
+                                                              #kpoint 
+bands = bands - fermi                                         #set the zero point at the Fermi level
 
-fermiidxatgamma = np.argmin(abs(bands[nkpt//2,:]))
+fermiidxatgamma = np.argmin(abs(bands[nkpt//2,:]))       #Fermi index at gamma point CAREFUL
+                                                         #nkpt is kpts+1, where is actually the gamma point?
+                                                         #could be nkpt//2 or (nkpt//2)+1
+                                                         #resolved: kpoints is equal to zero at index nkpt//2
 
+#Define the range to be studied:
+#centered on the fermi level at gamma point
+#nplotstates/2 upper and nplotstates/2 lower
 states_range = list(range(fermiidxatgamma-nplotstates//2, fermiidxatgamma+nplotstates//2))
 
+np.argmin(abs(kpts))
 
-def plotbandst(ax, kpts, bands, statesRange=None):             #función para plotear las bandas 
+"""
+<plotbandst function> function to plot the band structure automatically
+it needs: ax, kpts, the bands info, the range
+"""
+def plotbandst(ax, kpts, bands, statesRange=None):       
     try:
         plotst = len(statesRange)
     except:
@@ -67,9 +82,11 @@ plotbandst(ax, kpts, bands, states_range)
 
 work_dir = os.getcwd()
 
+#list of strings cotaining the populations file names sorted
 molpopuls = [file for file in os.listdir(root_pops) if "molpopul" in file]
 molpopuls.sort()
 
+#datapops contains the data of the first kpoint
 datapops = np.genfromtxt(root_pops+molpopuls[0])
 time = datapops[:,0]
 
@@ -103,7 +120,7 @@ for it,t in enumerate(timeidxs):
         for ik, kpt in enumerate(kpts_pops):
             ikb = np.argmin(abs(kpts-kpt))
             ikb2 = np.argmin(abs(kpts+kpt)) # -(-ik)
-            deltapop = (pops[t,ik,ist]-pops[0,ik,ist])*circle_size_factor
+            deltapop = (pops[t,ik,ist]-pops[0,ik,ist])*circle_size_factor   #multiplied by circle factor        
             coloridx = int(np.sign(deltapop)+1.0)//2
             ax[it].scatter(kpts[ikb], bands[ikb,ist], s=np.sqrt(abs(deltapop)), color=cols[coloridx], edgecolor='k')
             ax[it].scatter(kpts[ikb2], bands[ikb2,ist], s=np.sqrt(abs(deltapop)), color=cols[coloridx], edgecolor='k') 
@@ -112,4 +129,11 @@ for it,t in enumerate(timeidxs):
 ax[0].set_ylabel('Energy (eV)',fontsize=16);
 
 plt.savefig('dynbandpops.png', fmt='png', dpi=300, bbox_inches='tight')
+
+
+
+
+
+
+
 

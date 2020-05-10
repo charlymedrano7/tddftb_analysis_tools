@@ -1,2 +1,4 @@
 *.ipynb
 .ipynb_checkpoints
+dynbandpops/*.gz
+dynbandpops/4.17/
