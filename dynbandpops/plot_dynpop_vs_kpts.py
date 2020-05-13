@@ -50,10 +50,18 @@ for ik,idx in enumerate(idxs):
                                                               #kpoint 
 bands = bands - fermi                                         #set the zero point at the Fermi level
 
-fermiidxatgamma = np.argmin(abs(bands[nkpt//2,:]))       #Fermi index at gamma point CAREFUL
-                                                         #nkpt is kpts+1, where is actually the gamma point?
-                                                         #could be nkpt//2 or (nkpt//2)+1
-                                                         #resolved: kpoints is equal to zero at index nkpt//2
+# +
+try:
+    idx = np.where(kpts == 0.0)[0]
+    gammaidx = idx[0]
+    fermiidxatgamma = np.argmin(abs(bands[gammaidx,:]))       #Fermi index at gamma point
+
+    if (len(idx) > 1):
+        sys.exit("More than one k-point with zero coordinates, something fishy")
+
+except:
+    sys.exit("No k-point found with zero coordinates, gamma point missing?")
+# -
 
 #define the range to be studied:
 #centered on the fermi level at gamma point
@@ -62,7 +70,7 @@ states_range = list(range(fermiidxatgamma-nplotstates//2, fermiidxatgamma+nplots
 
 """
 <plotbandst function> function to plot the band structure automatically inside a subplots approach
-needs: ax (index from a list), kpts (array containing the kpoints), bands (array of shape (kpoints,nstates)) 
+needs: ax (plt axis objetct), kpts (array containing the kpoints), bands (array of shape (kpoints,nstates)) 
 info and statesRange (states range to be plotted).
 returns: a plot showing the band structure in the specified range. If the range is not specified the function
 will plot all the states by default.
@@ -87,7 +95,7 @@ work_dir = os.getcwd()
 molpopuls = [file for file in os.listdir(root_pops) if "molpopul" in file]
 molpopuls.sort()
 
-#datapops contains the data of the first kpoint
+#datapops contains the data of the first kpoint, this is loaded in advance just to get the size of the arrays below
 datapops = np.genfromtxt(root_pops+molpopuls[0])
 time = datapops[:,0]
 
