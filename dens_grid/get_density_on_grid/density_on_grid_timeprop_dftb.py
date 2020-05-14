@@ -1,6 +1,6 @@
 #!/usr/bin python3
 
-"""density_on_grid_timeprop_dftb.py: Calculates electronic density in real space grid \
+"""density_on_grid_timeprop_dftb.py: Calculates electronic density difference in real space grid \
    and saves it as CUBE files, from density matrix dumped in time propagations using DFTB+.
    Needs files ptable.csv and STO.DAT in the working directory."""
 

@@ -1,8 +1,8 @@
 ####################### STO.data FORMAT #########################################
 # This file contains the data from the slater koster files used in the 
 # calculation needed for the density_on_grid_timeprop_dftb.py script.
-# Up to now, the user must to do this file manually, based on the 
-# wfc.hsd file used for waveplot.
+# Currently the user must write this file manually, based on the 
+# wfc.hsd file used by waveplot.
 #################################################################################
 ### for each kind of atom there is a block containing the next info:
 #
