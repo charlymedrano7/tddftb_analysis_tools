@@ -2,7 +2,7 @@
 
 """density_on_grid_timeprop_dftb.py: Calculates electronic density difference in real space grid \
    and saves it as CUBE files, from density matrix dumped in time propagations using DFTB+.
-   Needs files ptable.csv and STO.DAT in the working directory."""
+   Needs files ptable.csv and wfc file for the SK parameter set, downloadable from dftb.org."""
 
 __author__      = "Franco Bonafe, Cristian G. Sanchez"
 __maintainer__  = "Franco Bonafe"
@@ -18,7 +18,7 @@ import csv
 from numba import jit
 from scipy.special import sph_harm as Ynm #Ynm(m, n, theta, phi), theta=azimuthal, phi=polar
 from scipy import constants
-
+import readsto
 
 ###### Variables to set before running (EDIT) ############# 
 
@@ -29,7 +29,7 @@ ny = 64
 nz = 64
 
 iniframe = 0          #initial and final frames (depends on the dftb input)
-endframe = 9          
+endframe = 2
 frameinterval = 2     #interval of frames to take into account
 
 DUMPBIN_DIR = '../'  # directory where the *dump.bin files are located
@@ -38,6 +38,7 @@ CUBES_DIR = './cubes/' # directory where the cubefiles will be stored
 coordfile = '../geo.xyz'  ## edit accordingly
 rhodumpfile = '0ppdump.bin' # *dump.bin file for step = 0 (ground state density), edit
 
+wfc_filename = 'wfc.pbc-0-3.hsd'
 
 ##########################################################
 
@@ -112,51 +113,10 @@ def writeCube(cubefile, dens, natoms, box, nx, ny, nz, dx, dy, dz, atomZ, coords
                 cubout.write('\n')
 
 
-def readStoData(nelemread):
-    lmax = {}
-    occ = defaultdict(list)
-    cutoff = defaultdict(list)
-    nexp = defaultdict(list)
-    exps = defaultdict(list)
-    ncoeff = defaultdict(list)
-    coeffs = defaultdict(list)
-    with open('STO.pbc.dat', 'r') as stofile:               #file with the parameters needed
-        for ielem in range(nelemread):                      #based on the parameters used in waveplot
-            atz = int(stofile.readline().split()[0])
-            lmax[atz] = int(stofile.readline().split()[0])
-
-            for l in range(lmax[atz]+1):
-                ll = int(stofile.readline().split()[0])
-                occ[atz].append(float(stofile.readline().split()[0]))
-                cutoff[atz].append(float(stofile.readline().split()[0]))
-                this_nexp = int(stofile.readline().split()[0])
-                nexp[atz].append(this_nexp)
-
-                exps_line = stofile.readline().split()
-                exps[atz].append([float(exps_line[j]) for j in range(this_nexp)])
-                this_ncoeff = int(stofile.readline().split()[0])
-                ncoeff[atz].append(this_ncoeff)
-
-                coeffs_line = stofile.readline().split()
-                lcoeffs_aux = []
-                for j in range(this_nexp):
-                    lcoeffs_aux.append([float(coeffs_line[j*3+k]) for k in range(this_ncoeff)])
-                coeffs[atz].append(lcoeffs_aux)
-            
-            occ[atz] = np.array(occ[atz])
-            cutoff[atz] = np.array(cutoff[atz])
-            nexp[atz] = np.array(nexp[atz])
-            exps[atz] = np.array(exps[atz])
-            ncoeff[atz] = np.array(ncoeff[atz])
-            coeffs[atz] = np.array(coeffs[atz])
-            
-    return lmax, occ, cutoff, nexp, exps, ncoeff, coeffs
-
-
 class atomBasis():
     def __init__(self, nelem):
-        self.lmax, self.occ, self.cutoff, self.nexp, self.exps, self.ncoeff, self.coeffs = readStoData(nelem)
-
+        self.lmax, self.occ, self.cutoff, self.nexp, self.exps, self.ncoeff, \
+            self.coeffs = readsto.readStoDataNew(wfc_filename)
 
 def getBox(coords):
     bspace = 3.5
