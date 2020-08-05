@@ -1,9 +1,18 @@
-import hsd
+"""readsto.py: Parses STO parameters from different file formats: plain file
+ format or HSD format. For HSD files (like wfc*.hsd) files for waveplots,
+needs hsd-python module (https://github.com/dftbplus/hsd-python)  """
+
+__author__      = "Franco Bonafe"
+__email__       = "fbonafe@unc.edu.ar"
+__copyright__   = "Copyright 2018, FCQ UNC"
+__status__      = "Prototype"
+
 import itertools
 from collections import defaultdict
 import numpy as np
 
 def readStoDataNew(wfc_filename):
+    import hsd
     lmax = {}
     occ = defaultdict(list)
     cutoff = defaultdict(list)

@@ -118,6 +118,12 @@ class atomBasis():
         self.lmax, self.occ, self.cutoff, self.nexp, self.exps, self.ncoeff, \
             self.coeffs = readsto.readStoDataNew(wfc_filename)
 
+        # if no hsd-parser is installed and want to use the old STO parameter
+        # files, comment previous two lines and uncomment the next ones:
+        #self.lmax, self.occ, self.cutoff, self.nexp, self.exps, self.ncoeff, \
+        #    self.coeffs = readsto.readStoDataOld(wfc_filename, nelem)
+
+
 def getBox(coords):
     bspace = 3.5
     box = []
