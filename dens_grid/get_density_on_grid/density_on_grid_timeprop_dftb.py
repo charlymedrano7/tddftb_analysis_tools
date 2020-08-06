@@ -19,6 +19,7 @@ from numba import jit
 from scipy.special import sph_harm as Ynm #Ynm(m, n, theta, phi), theta=azimuthal, phi=polar
 from scipy import constants
 import readsto
+import concurrent.features
 
 ###### Variables to set before running (EDIT) ############# 
 
@@ -47,14 +48,14 @@ wfc_filename = 'wfc.pbc-0-3.hsd'
 
 ### Definition of functions #######################
 
-nelemread = 5                    #number of elements in the system
+nelemread = 5               #number of elements in the system
 
-orbs_per_l = [1, 3, 5, 7]        #l quantum number for each type of orbital (don't change)
+orbs_per_l = [1, 3, 5, 7]    #l quantum number for each type of orbital (do not change)
 
 if not os.path.exists(CUBES_DIR):
     os.makedirs(CUBES_DIR)
 
-ptable_data = csv.DictReader(open("ptable.csv")) #ptable.cvs file needs to be in the same directory as this notebook
+ptable_data = csv.DictReader(open("ptable.csv")) #ptable.cvs file needed
 ptable = {}
 for row in ptable_data:
     symbol = row[' symbol'].strip()
@@ -221,6 +222,13 @@ def getDensOnGrid(basis, box, nx, ny, nz, dx, dy, dz, rho, atomzs, coords, norbs
                                                     basis.exps, basis.coeffs, norbs, orbidx)
     return dens
 
+def binToCube(ifr):
+    rhofile = DUMPBIN_DIR+'{}ppdump.bin'.format(ifr)
+    rhot = readRho(rhofile, norbs)
+    denst = getDensOnGrid(basis, box, nx, ny, nz, dx, dy, dz, rhot, atomZ, myCoords, norbs, orbidx)
+    # writes DENSITY DIFFERENCE to cubefile
+    writeCube(CUBES_DIR+'{}dens.cube'.format(ifr), denst-inidens, natoms, box, nx, ny, nz, dx, dy, dz, atomZ, myCoords)
+    return ifr
 
 ##### START CALCULATION #######
 
@@ -245,14 +253,10 @@ inidens = getDensOnGrid(basis, box, nx, ny, nz, dx, dy, dz, rho0, atomZ, myCoord
 
 writeCube(CUBES_DIR+'inidens.cube', inidens, natoms, box, nx, ny, nz, dx, dy, dz, atomZ, myCoords)
 
+listofframes = list(range(iniframe, endframe+1, frameinterval))
 
-for ifr in range(iniframe, endframe+1, frameinterval):
-    rhofile = DUMPBIN_DIR+'{}ppdump.bin'.format(ifr)
-    rhot = readRho(rhofile, norbs)
-    denst = getDensOnGrid(basis, box, nx, ny, nz, dx, dy, dz, rhot, atomZ, myCoords, norbs, orbidx)
-    # writes DENSITY DIFFERENCE to cubefile
-    writeCube(CUBES_DIR+'{}dens.cube'.format(ifr), denst-inidens, natoms, box, nx, ny, nz, dx, dy, dz, atomZ, myCoords)
-
+with concurrent.futures.ProcessPoolExecutor() as executor:
+    for it, frameout in enumerate(executor.map(binToCube, listofframes)):
+        print('Done frame',framout)
 
 print('Done.')
-
