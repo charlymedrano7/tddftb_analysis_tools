@@ -2,3 +2,4 @@
 .ipynb_checkpoints
 dynbandpops/*.gz
 dynbandpops/4.17/
+electpot/*.png
