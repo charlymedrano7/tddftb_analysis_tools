@@ -74,37 +74,50 @@ def plotelectricfield(coords, layer, charges, timearr, times, prefix, scale=None
     nxpoints = int(2*xmax/res)                            #
     xrange = np.linspace(-xmax, xmax, nxpoints)          
 #     print (nypoints)                                      #borrable
-    alfa = 0.5                                            #radio de exclusión para el cálculo del E (el E 
+    alfa = 0.0                                            #radio de exclusión para el cálculo del E (el E 
                                                           #se va al carajo)
     timeidxs = [np.argmin(abs(timearr-t)) for t in times] #index del time para calc
-
+    xval = xx[0]
+    print(xval)
+    electfields = []
     for i,timeidx in enumerate(timeidxs):
         elp = np.zeros_like(domy)                         #define electric potential 
-        for xval in xrange:                               #me muevo en y porque lo calculo aquí
-            for at in range(natoms-layer, natoms):                      #acá sólo tengo que iterar sobre las moléculas
-                elp += (charges[timeidx,at]-charges[0,at])\
-                /np.sqrt((domy-yy[at])**2 + (xval-xx[at])**2 + (domz-zz[at])**2 + alfa**2)
-            elp /= nxpoints                           #promedio (carga neta del átomo dividido la norma)
-
+#         for xval in xrange:                               #me muevo en y porque lo calculo aquí
+        for at in range(natoms-layer, natoms):                      #acá sólo tengo que iterar sobre las moléculas
+            elp += (charges[timeidx,at]-charges[0,at])\
+            /np.sqrt((domy-yy[at])**2 + (xval-xx[at])**2 + (domz-zz[at])**2 + alfa**2)
+        elp *= 9.9e9*1.6e-19*1e10
+#         elp /= nxpoints                           #promedio (carga neta del átomo dividido la norma)
+        print(elp.shape)
+        grad = np.gradient(elp, res, axis=0)           #gradiente (derivada parcial en y)
+        elect_field = grad.sum(axis=1)/grad.shape[1]   #calcula el promedio en z 
+        electfields.append(elect_field)                #appendeo los campos en la lista   
+        
 #Matplotlib
-        if scale is None:
-            z_min, z_max = -np.abs(elp).max(), np.abs(elp).max()
-        else:
-            z_amp = scale
-            z_min, z_max = -z_amp, z_amp
+#         if scale is None:
+#             z_min, z_max = -np.abs(elp).max(), np.abs(elp).max()
+#         else:
+#             z_amp = scale
+#             z_min, z_max = -z_amp, z_amp
 
-        plt.figure(num=None, figsize=(5, 4), dpi=200)
-        plt.pcolormesh(domz,domy, elp, vmin=z_min, vmax=z_max, cmap=plt.get_cmap('seismic'))
-        if i == len(timeidxs)-1:
-            plt.colorbar(ticks=[z_min, z_max], format="%.6f")
-        plt.title('$t = {:.1f}$ fs'.format(timearr[timeidx]))
-        plot_struc(zz[:natoms-layer], yy[:natoms-layer], 'Yes')
-        plot_struc(zz[natoms-layer:natoms], yy[natoms-layer:natoms], 'No')
-        plt.axis('off')
-        plt.savefig(prefix+'pot_'+str(i).zfill(3), dpi=150, bbox_inches='tight')
-#         plt.close()
+#         plt.figure(num=None, figsize=(5, 4), dpi=200)
+#         plt.pcolormesh(domz,domy, elp, vmin=z_min, vmax=z_max, cmap=plt.get_cmap('seismic'))
+#         if i == len(timeidxs)-1:
+#             plt.colorbar(ticks=[z_min, z_max], format="%.6f")
+#         plt.title('$t = {:.1f}$ fs'.format(timearr[timeidx]))
+#         plot_struc(zz[:natoms-layer], yy[:natoms-layer], 'Yes')
+#         plot_struc(zz[natoms-layer:natoms], yy[natoms-layer:natoms], 'No')
+#         plt.axis('off')
+#         plt.savefig(prefix+'pot_'+str(i).zfill(3), dpi=150, bbox_inches='tight')
+# #         plt.close()
+    
+    y_array = np.arange(-ymax,ymax,res)
+    return y_array, electfields
 
 
+
+# HAY QUE CORREGIR EL CAMPO (MENOS EL GRADIENTE)
+# PARTIR LA FUNCIÓN EN DOS: UNA PARA CALCULAR EL CAMPO Y OTRA PARA PLOTEAR EL POTENCIAL SOBRE LA PLATAFORMA
 # -
 
 # rootdir = '{}/field0.0001/'.format(55)
@@ -113,20 +126,50 @@ names, coords = readCoords('coords.xyz')
 charges = qdata[:,2:]
 timearr = qdata[:,0]
 
-time = [24]
-plotelectricfield(coords,324, charges, timearr, time, '24_')
+time = timearr
+yy, elect_field_y = plotelectricfield(coords,324, charges, timearr, time, '24_')
+
+yy.shape
+
+# +
+len(elect_field_y)
+
+elect_field_y = np.array(elect_field_y)
+
+# +
+# plt.plot(yy, elect_field_y[:,0])
+# plt.plot(yy, elect_field_y[:,100])
+
+plt.imshow(elect_field_y, aspect='auto')
+# -
+
+E0 = 0.001
+omega = 1.3/0.658
+
+average_elect_y = elect_field_y.sum(axis=1)/elect_field_y.shape[1]
+
+yy[300]
+
+# +
+plt.figure(figsize=(16,8))
+
+plt.plot(timearr, -elect_field_y[:,300], label=r'near field at -1.5 $\AA$', lw=2.0)
+plt.plot(timearr, E0*np.sin(omega*timearr), label='external field', lw=2.0)
+plt.plot(timearr, -elect_field_y[:,300]+E0*np.sin(omega*timearr), label='near+external', lw=3.0)
+# plt.plot(timearr, -average_elect_y, label='average near field')
+
+plt.xlim(0,30)
+
+plt.legend(fontsize=20)
+plt.xlabel('time (fs)', fontsize=20)
+plt.ylabel('Electric field', fontsize=20)
+# -
 
 time = [12]
 plotelectricfield(coords,324, charges, timearr, time, '12_')
 
-time = [0]
+time = [18]
 plotelectricfield(coords,324, charges, timearr, time, '00_')
-
-rootdir = '{}/'.format('8x8')
-qdata = np.genfromtxt(rootdir+'qsvst.dat')
-names, coords = readCoords(rootdir+'coords.xyz')
-charges = qdata[:,2:]
-timearr = qdata[:,0]
 
 time = [9.03]
 plotelectricfield(coords, charges, timearr, time, '8x8')
