@@ -32,6 +32,10 @@ ang_to_bohr = constants.physical_constants['Bohr radius'][0] * 1.0E10
 hplanck = constants.physical_constants['Planck constant in eV s'][0] * 1.0E15
 
 # %matplotlib inline
+# -
+
+hplanck
+
 
 # +
 def readCoords(filename):
@@ -88,7 +92,7 @@ def plotelectricfield(coords, layer, charges, timearr, times, prefix, scale=None
             /np.sqrt((domy-yy[at])**2 + (xval-xx[at])**2 + (domz-zz[at])**2 + alfa**2)
         elp *= 9.9e9*1.6e-19*1e10
 #         elp /= nxpoints                           #promedio (carga neta del átomo dividido la norma)
-        print(elp.shape)
+#         print(elp.shape)
         grad = np.gradient(elp, res, axis=0)           #gradiente (derivada parcial en y)
         elect_field = grad.sum(axis=1)/grad.shape[1]   #calcula el promedio en z 
         electfields.append(elect_field)                #appendeo los campos en la lista   
@@ -151,7 +155,7 @@ average_elect_y = elect_field_y.sum(axis=1)/elect_field_y.shape[1]
 yy[300]
 
 # +
-plt.figure(figsize=(16,8))
+plt.figure(figsize=(12,8))
 
 plt.plot(timearr, -elect_field_y[:,300], label=r'near field at -1.5 $\AA$', lw=2.0)
 plt.plot(timearr, E0*np.sin(omega*timearr), label='external field', lw=2.0)
@@ -160,6 +164,7 @@ plt.plot(timearr, -elect_field_y[:,300]+E0*np.sin(omega*timearr), label='near+ex
 
 plt.xlim(0,30)
 
+plt.title('1.3 eV ')
 plt.legend(fontsize=20)
 plt.xlabel('time (fs)', fontsize=20)
 plt.ylabel('Electric field', fontsize=20)
@@ -171,16 +176,83 @@ plotelectricfield(coords,324, charges, timearr, time, '12_')
 time = [18]
 plotelectricfield(coords,324, charges, timearr, time, '00_')
 
-time = [9.03]
-plotelectricfield(coords, charges, timearr, time, '8x8')
+# rootdir = '{}/field0.0001/'.format(55)
+qdata_post = np.genfromtxt('/home/charly/Palma_project/KPOINT/ActSpecs_frank/ActSpec_TDI/2.1/qsvst.dat')
+names, coords = readCoords('/home/charly/Palma_project/KPOINT/ActSpecs_frank/ActSpec_TDI/2.1/coords.xyz')
+charges_post = qdata_post[:,2:]
+timearr_post = qdata_post[:,0]
 
-rootdir = '{}/'.format('10x10')
-qdata = np.genfromtxt(rootdir+'qsvst.dat')
-names, coords = readCoords(rootdir+'coords.xyz')
-charges = qdata[:,2:]
-timearr = qdata[:,0]
+time_post = timearr_post
+yy_post, elect_field_y_post = plotelectricfield(coords,324, charges_post, timearr_post, time_post, '24_')
 
-time = [9.03]
-plotelectricfield(coords, charges, timearr, time, '10x10')
+# +
+len(elect_field_y_post)
+
+elect_field_y_post = np.array(elect_field_y_post)
+# -
+
+plt.imshow(elect_field_y_post, aspect='auto')
+
+E0 = 0.001
+omega_post = 2.1/0.658
+
+average_elect_y_post = elect_field_y_post.sum(axis=1)/elect_field_y_post.shape[1]
+
+# +
+plt.figure(figsize=(12,8))
+
+plt.plot(timearr_post, -elect_field_y_post[:,300], label=r'near field at -1.5 $\AA$', lw=2.0)
+plt.plot(timearr_post, E0*np.sin(omega_post*timearr_post), label='external field', lw=2.0)
+plt.plot(timearr_post, -elect_field_y_post[:,300]+E0*np.sin(omega_post*timearr_post), label='near+external', lw=3.0)
+# plt.plot(timearr, -average_elect_y, label='average near field')
+
+plt.xlim(0,30)
+
+plt.title('2.1 eV', fontsize=40)
+plt.legend(fontsize=20, loc='upper right')
+plt.xlabel('time (fs)', fontsize=20)
+plt.ylabel('Electric field', fontsize=20)
+# -
+# rootdir = '{}/field0.0001/'.format(55)
+qdata_exc = np.genfromtxt('/home/charly/Palma_project/KPOINT/lasers/tdi/qsvst.dat')
+names, coords = readCoords('/home/charly/Palma_project/KPOINT/lasers/tdi/coords.xyz')
+charges_exc = qdata_post[:,2:]
+timearr_exc = qdata_post[:,0]
+
+time_exc = timearr_exc
+yy_exc, elect_field_y_exc = plotelectricfield(coords,324, charges_exc, timearr_exc, time_exc, '24_')
+
+# +
+len(elect_field_y_exc)
+
+elect_field_y_exc = np.array(elect_field_y_exc)
+# -
+
+plt.imshow(elect_field_y_post, aspect='auto')
+
+E0 = 0.001
+omega_exc = 1.79/0.658
+
+average_elect_y_exc = elect_field_y_exc.sum(axis=1)/elect_field_y_exc.shape[1]
+
+# +
+plt.figure(figsize=(12,8))
+
+plt.plot(timearr_exc, -elect_field_y_exc[:,300], label=r'near field at -1.5 $\AA$', lw=2.0)
+plt.plot(timearr_exc, E0*np.sin(omega_exc*timearr_exc), label='external field', lw=2.0)
+plt.plot(timearr_exc, -elect_field_y_exc[:,300]+E0*np.sin(omega_exc*timearr_exc), label='near+external', lw=3.0)
+# plt.plot(timearr, -average_elect_y, label='average near field')
+
+plt.xlim(0,30)
+
+plt.title('1.79 eV', fontsize=40)
+plt.legend(fontsize=20, loc= "upper right")
+plt.xlabel('time (fs)', fontsize=20)
+plt.ylabel('Electric field', fontsize=20)
+# -
+
+
+
+
 
 
