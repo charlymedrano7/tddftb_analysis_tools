@@ -66,9 +66,7 @@ def main():
 	def get_spectrum(file, e_i, e_f, points, gamma):
 		excitations = np.genfromtxt(file, skip_header=5)[:,:2]  #take first two columns of EXC.DAT
 		energies = np.linspace(e_i, e_f, num=points)            #array of energies
-		wavelengths = np.zeros_like(energies)                   #array for wavelengths
-		wavelengths[1:-1] = (hplanck*c/energies[1:-1])*1e9
-		wavelengths[0] = wavelengths[1]                         #just repeat last value ("inf")
+		wavelengths = (hplanck*c/energies[1:])*1.e9
 		exc = excitations[:,0]                                  #ecitation energies
 		osc_str = excitations[:,1]                              #oscilation strength associated
 		spectrum = np.zeros_like(energies)                      #array for the spectrum
@@ -91,8 +89,7 @@ def main():
 	
 	#### SPECTRA OUTPUT in eV and nm ####
 	np.savetxt('spec-Cas-ev.dat',np.column_stack((energies, spectrum)))
-	np.savetxt('spec-Cas-nm.dat',np.column_stack((wavelengths, spectrum)))
-
+	np.savetxt('spec-Cas-nm.dat',np.column_stack((wavelengths, spectrum[1:])))
 
 if __name__ == "__main__":
 	main()
