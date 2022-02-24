@@ -24,28 +24,28 @@ def readStoDataNew(wfc_filename):
     dictbuilder = hsd.HsdDictBuilder()
     parser = hsd.HsdParser(eventhandler=dictbuilder)
     with open(wfc_filename, 'r') as fileobj:
-        parser.feed(fileobj)
+        parser.parse(fileobj)
     pyrep = dictbuilder.hsddict
     for key, val in pyrep.items():
-        print(key)
-        atz = int(pyrep[key]['atomicnumber'])
-        if isinstance(pyrep[key]['orbital'], dict):
+        # print(key)
+        atz = int(pyrep[key]['AtomicNumber'])
+        if isinstance(pyrep[key]['Orbital'], dict):
             lmax[atz] = 0
-            pyrep[key]['orbital'] = [pyrep[key]['orbital']]
+            pyrep[key]['Orbital'] = [pyrep[key]['Orbital']]
         else:
-            lmax[atz] = (pyrep[key]['orbital'][-1]['angularmomentum'])
+            lmax[atz] = (pyrep[key]['Orbital'][-1]['AngularMomentum'])
 
-        for iorb, orbs in enumerate(pyrep[key]['orbital']):
-            ll = orbs['angularmomentum']
-            occ[atz].append(orbs['occupation'])
-            cutoff[atz].append(orbs['cutoff'])
-            if any(isinstance(exp, list) for exp in orbs['exponents']):
-                exps[atz].append(list(itertools.chain(*orbs['exponents'])))
+        for iorb, orbs in enumerate(pyrep[key]['Orbital']):
+            ll = orbs['AngularMomentum']
+            occ[atz].append(orbs['Occupation'])
+            cutoff[atz].append(orbs['Cutoff'])
+            if any(isinstance(exp, list) for exp in orbs['Exponents']):
+                exps[atz].append(list(itertools.chain(*orbs['Exponents'])))
             else:
-                exps[atz].append(list(itertools.chain(orbs['exponents'])))
+                exps[atz].append(list(itertools.chain(orbs['Exponents'])))
             number_of_exp = len(exps[atz][iorb])
             nexp[atz].append(number_of_exp)
-            flat_coeffs = list(itertools.chain(*orbs['coefficients']))
+            flat_coeffs = list(itertools.chain(*orbs['Coefficients']))
             total_coeffs = len(flat_coeffs)
             ncoeffs_per_exp = total_coeffs // number_of_exp
             coeffs[atz].append([flat_coeffs[ic:ic+ncoeffs_per_exp] \
@@ -69,7 +69,7 @@ def readStoDataOld(sto_filename, nelemread):
     ncoeff = defaultdict(list)
     coeffs = defaultdict(list)
     with open(sto_filename, 'r') as stofile:  # file with the STO parameters
-        for ielem in range(nelemread):         # based on the wavelot wfc files
+        for ielem in range(nelemread):         # based on the waveplot wfc files
             atz = int(stofile.readline().split()[0])
             lmax[atz] = int(stofile.readline().split()[0])
 
@@ -95,9 +95,9 @@ def readStoDataOld(sto_filename, nelemread):
 
 def test():
     lmax, occ, cutoff, nexp, exps, ncoeff, \
-        coeffs = readStoDataNew('wfc.pbc-0-3.hsd')
+        coeffs = readStoDataNew('wfc.mio-1-1.hsd')
     lmax2, occ2, cutoff2, nexp2, exps2, ncoeff2, \
-        coeffs2 = readStoDataOld('STO.pbc.dat', 5)
+        coeffs2 = readStoDataOld('STO.mio.dat', 5)
     print('are they equal?')
     for key in lmax:
         print('key',key)

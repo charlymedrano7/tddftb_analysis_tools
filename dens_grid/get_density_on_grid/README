@@ -7,4 +7,6 @@ in the dftb_in.hsd file to dump the time-evolving density matrix to a
 binary file every given number of steps (*ppdump.bin files)
 
 - The user has to edit some variables inside the density_on_grid_timeprop_dftb.py
- 
+
+- The user may install https://github.com/dftbplus/hsd-python
+

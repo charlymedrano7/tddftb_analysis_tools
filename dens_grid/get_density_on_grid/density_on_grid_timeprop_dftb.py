@@ -15,31 +15,33 @@ from collections import defaultdict
 import numpy as np
 import csv
 
-from numba import jit
+from numba import jit   ###njit
+# from numba.typed import List
 from scipy.special import sph_harm as Ynm #Ynm(m, n, theta, phi), theta=azimuthal, phi=polar
 from scipy import constants
 import readsto
-import concurrent.features
+import concurrent.futures
 
 ###### Variables to set before running (EDIT) ############# 
 
 
 #grid points
-nx = 64
-ny = 64
-nz = 64
+nx = 32
+ny = 32
+nz = 32
 
 iniframe = 0          #initial and final frames (depends on the dftb input)
-endframe = 2
-frameinterval = 2     #interval of frames to take into account
+endframe = 1
+frameinterval = 1     #interval of frames to take into account
 
 DUMPBIN_DIR = '../'  # directory where the *dump.bin files are located
 CUBES_DIR = './cubes/' # directory where the cubefiles will be stored
 
-coordfile = '../geo.xyz'  ## edit accordingly
+coordfile = './geo.xyz'  ## edit accordingly
 rhodumpfile = '0ppdump.bin' # *dump.bin file for step = 0 (ground state density), edit
 
-wfc_filename = 'wfc.pbc-0-3.hsd'
+wfc_filename = 'wfc.mio-1-1.hsd'
+sto_filename = 'STO.mio.dat'
 
 ##########################################################
 
@@ -48,7 +50,7 @@ wfc_filename = 'wfc.pbc-0-3.hsd'
 
 ### Definition of functions #######################
 
-nelemread = 5               #number of elements in the system
+nelemread = 2             #number of elements in the system
 
 orbs_per_l = [1, 3, 5, 7]    #l quantum number for each type of orbital (do not change)
 
@@ -118,11 +120,10 @@ class atomBasis():
     def __init__(self, nelem):
         self.lmax, self.occ, self.cutoff, self.nexp, self.exps, self.ncoeff, \
             self.coeffs = readsto.readStoDataNew(wfc_filename)
-
         # if no hsd-parser is installed and want to use the old STO parameter
         # files, comment previous two lines and uncomment the next ones:
-        #self.lmax, self.occ, self.cutoff, self.nexp, self.exps, self.ncoeff, \
-        #    self.coeffs = readsto.readStoDataOld(wfc_filename, nelem)
+        # self.lmax, self.occ, self.cutoff, self.nexp, self.exps, self.ncoeff, \
+        #    self.coeffs = readsto.readStoDataOld(sto_filename, nelem)
 
 
 def getBox(coords):
@@ -195,7 +196,7 @@ def fillVectorAtR(atomzs, coords, rx, ry, rz, lmax, cutoff, nexp, ncoeff, exps, 
         if rrmod[iat] < cutoff[atz][0]: #taking the l=0 since cutoff is the same for all l
             idx = 0
             for ll in range(lmax[atz] + 1):
-                for mm in range(-ll, ll + 1):                
+                for mm in range(-ll, ll + 1):
                     eval_wfc = sto(atz, ll, rrmod[iat], nexp[atz], ncoeff[atz], exps[atz], coeffs[atz])
                     eval_wfc = eval_wfc * Rty(ll, mm, -rr[:,iat], rrmod[iat])
                     vec[orbidx[iat]+idx] = eval_wfc
@@ -252,11 +253,18 @@ rho0 = readRho(DUMPBIN_DIR+rhodumpfile, norbs)
 inidens = getDensOnGrid(basis, box, nx, ny, nz, dx, dy, dz, rho0, atomZ, myCoords, norbs, orbidx)
 
 writeCube(CUBES_DIR+'inidens.cube', inidens, natoms, box, nx, ny, nz, dx, dy, dz, atomZ, myCoords)
+print('Done frame')
 
 listofframes = list(range(iniframe, endframe+1, frameinterval))
 
-with concurrent.futures.ProcessPoolExecutor() as executor:
-    for it, frameout in enumerate(executor.map(binToCube, listofframes)):
-        print('Done frame',framout)
+# with concurrent.futures.ProcessPoolExecutor(1) as executor:
+#     for it, frameout in enumerate(executor.map(binToCube, listofframes)):
+#         print('Done frame',frameout)
+
+for it, frameout in enumerate(listofframes):
+    print('Starting', frameout)
+    binToCube(it)
+    print('Done frame', frameout)
+
 
 print('Done.')
