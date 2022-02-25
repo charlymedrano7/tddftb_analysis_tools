@@ -2,7 +2,7 @@
 
 """density_on_grid_timeprop_dftb.py: Calculates electronic density difference in real space grid \
    and saves it as CUBE files, from density matrix dumped in time propagations using DFTB+.
-   Needs files ptable.csv and wfc file for the SK parameter set, downloadable from dftb.org."""
+   Needs wfc file for the SK parameter set, downloadable from dftb.org."""
 
 __author__      = "Franco Bonafe, Cristian G. Sanchez"
 __maintainer__  = "Franco Bonafe"
@@ -13,7 +13,6 @@ __status__      = "Prototype"
 import os
 from collections import defaultdict
 import numpy as np
-import csv
 
 from numba import jit   ###njit
 # from numba.typed import List
@@ -21,6 +20,7 @@ from scipy.special import sph_harm as Ynm #Ynm(m, n, theta, phi), theta=azimutha
 from scipy import constants
 import readsto
 import concurrent.futures
+from ase.io import read
 
 ###### Variables to set before running (EDIT) ############# 
 
@@ -34,10 +34,11 @@ iniframe = 0          #initial and final frames (depends on the dftb input)
 endframe = 1
 frameinterval = 1     #interval of frames to take into account
 
-DUMPBIN_DIR = '../'  # directory where the *dump.bin files are located
-CUBES_DIR = './cubes/' # directory where the cubefiles will be stored
 
-coordfile = './geo.xyz'  ## edit accordingly
+DUMPBIN_DIR = '../test_anthracene/'  # directory where the *dump.bin files are located
+CUBES_DIR = '../test_anthracene/cubes/' # directory where the cubefiles will be stored
+
+coordfile = '../test_anthracene/anthracene.gen'  ## edit accordingly
 rhodumpfile = '0ppdump.bin' # *dump.bin file for step = 0 (ground state density), edit
 
 wfc_filename = 'wfc.mio-1-1.hsd'
@@ -57,12 +58,6 @@ orbs_per_l = [1, 3, 5, 7]    #l quantum number for each type of orbital (do not 
 if not os.path.exists(CUBES_DIR):
     os.makedirs(CUBES_DIR)
 
-ptable_data = csv.DictReader(open("ptable.csv")) #ptable.cvs file needed
-ptable = {}
-for row in ptable_data:
-    symbol = row[' symbol'].strip()
-    ptable[symbol] = int(row['atomicNumber'])
-
 def getNorbs(atomzs, lmax):
     norbs = 0
     for iat in atomzs:
@@ -71,25 +66,30 @@ def getNorbs(atomzs, lmax):
     return norbs
 
 def readCoords(thisfile):
-    cfile = open(thisfile, 'r')
-    thisfile = cfile.readlines()
-    natoms = int(thisfile[0].strip())
-    coords = [[],[],[]]
-    atomZ = []
-    for atom in range(2,natoms+2):
-        name = thisfile[atom].strip().split()[0]
-        atomZ.append(ptable[name])
-        coords[0].append(float(thisfile[atom].strip().split()[1]))
-        coords[1].append(float(thisfile[atom].strip().split()[2]))
-        coords[2].append(float(thisfile[atom].strip().split()[3]))
+    mol = read(thisfile)
+    pos = mol.get_positions() # [iat, idir]
+    coords = np.transpose(pos)
+    atomZ = mol.get_atomic_numbers()
     return atomZ, np.array(coords)
 
-
 def readRho(rhofile, norbs):
-    with open(rhofile, 'rb') as f:
-        rho = np.fromfile(f,dtype='complex128',count=norbs*norbs)
-        #coords = np.fromfile(f,dtype='float64',count=natoms*3)
-        #veloc = np.fromfile(f,dtype='float64',count=natoms*3)    
+    try:
+        with open(rhofile, 'rb') as f:
+            dumpfmt = np.fromfile(f,dtype='int32',count=1)
+            norbsfromrho = np.fromfile(f,dtype='int32',count=1)
+            nspin = np.fromfile(f,dtype='int32',count=1)
+            natoms = np.fromfile(f,dtype='int32',count=1)
+            time = np.fromfile(f,dtype='float64',count=1)
+            dt = np.fromfile(f, dtype='float64', count=1)
+            print('dumpfmt',dumpfmt)
+            print('norbs',norbsfromrho)
+            print('nspin',nspin)
+            print('natoms',natoms)
+            print('time',time)
+            print('dt',dt)
+            rho = np.fromfile(f,dtype='complex128',count=norbs*norbs)
+    except IOError:
+        print('File',rhofile,'not exist')
     rho = np.reshape(rho,(norbs,norbs))
     return rho
 
@@ -135,7 +135,7 @@ def getBox(coords):
     return box # box = [[xmin, xmax], [ymin, ymax], [zmin, zmax]]
 
 
-@jit(nopython=True)
+#@jit(nopython=True)
 def sto(z, l, r, nexp, ncoeff, exps, coeffs):
     sto = 0.0
     for i in range(nexp[l]):
@@ -144,7 +144,7 @@ def sto(z, l, r, nexp, ncoeff, exps, coeffs):
     return sto
 
 
-@jit(nopython=True)
+#@jit(nopython=True)
 def Rty(n, m, coord, rr):
     xx = coord[0]
     yy = coord[1]
@@ -248,7 +248,6 @@ for i in range(natoms):
     orbidx[i] = idx
     idx += sum(orbs_per_l[:basis.lmax[atomZ[i]]+1]) 
 
-
 rho0 = readRho(DUMPBIN_DIR+rhodumpfile, norbs)
 inidens = getDensOnGrid(basis, box, nx, ny, nz, dx, dy, dz, rho0, atomZ, myCoords, norbs, orbidx)
 
@@ -256,7 +255,7 @@ writeCube(CUBES_DIR+'inidens.cube', inidens, natoms, box, nx, ny, nz, dx, dy, dz
 print('Done frame')
 
 listofframes = list(range(iniframe, endframe+1, frameinterval))
-
+print('list of frames',listofframes)
 # with concurrent.futures.ProcessPoolExecutor(1) as executor:
 #     for it, frameout in enumerate(executor.map(binToCube, listofframes)):
 #         print('Done frame',frameout)
