@@ -4,9 +4,9 @@
    and saves it as CUBE files, from density matrix dumped in time propagations using DFTB+.
    Needs wfc file for the SK parameter set, downloadable from dftb.org."""
 
-__author__      = "Franco Bonafe, Cristian G. Sanchez"
-__maintainer__  = "Franco Bonafe"
-__email__       = "fbonafe@unc.edu.ar"
+__authors__      = "Franco Bonafe, Cristian G. Sanchez"
+__maintainers__  = "Franco Bonafe, Carlos Medrano"
+__email__       = "fbonafe@unc.edu.ar, cmedrano@unc.edu.ar"
 __copyright__   = "Copyright 2018, FCQ UNC"
 __status__      = "Prototype"
 
@@ -30,28 +30,26 @@ nx = 32
 ny = 32
 nz = 32
 
-iniframe = 0          #initial and final frames (depends on the dftb input)
-endframe = 1
+iniframe = 5          #initial and final frames (depends on the dftb input)
+endframe = 5
 frameinterval = 1     #interval of frames to take into account
 
 
-DUMPBIN_DIR = '../test_anthracene/'  # directory where the *dump.bin files are located
-CUBES_DIR = '../test_anthracene/cubes/' # directory where the cubefiles will be stored
+DUMPBIN_DIR = '../pump_frames/'  # directory where the *dump.bin files are located
+CUBES_DIR = './cubes/' # directory where the cubefiles will be stored
 
-coordfile = '../test_anthracene/anthracene.gen'  ## edit accordingly
+coordfile = '../coords.gen'  ## edit accordingly
 rhodumpfile = '0ppdump.bin' # *dump.bin file for step = 0 (ground state density), edit
 
-wfc_filename = 'wfc.mio-1-1.hsd'
-sto_filename = 'STO.mio.dat'
+wfc_filename = 'wfc.3ob-3-1.hsd'
+au__to__fs = 1/0.413413733365614E+02      ## from manual
 
 ##########################################################
 
 
-
-
 ### Definition of functions #######################
 
-nelemread = 2             #number of elements in the system
+nelemread = 1             #number of elements in the system
 
 orbs_per_l = [1, 3, 5, 7]    #l quantum number for each type of orbital (do not change)
 
@@ -81,12 +79,12 @@ def readRho(rhofile, norbs):
             natoms = np.fromfile(f,dtype='int32',count=1)
             time = np.fromfile(f,dtype='float64',count=1)
             dt = np.fromfile(f, dtype='float64', count=1)
-            print('dumpfmt',dumpfmt)
-            print('norbs',norbsfromrho)
-            print('nspin',nspin)
-            print('natoms',natoms)
-            print('time',time)
-            print('dt',dt)
+            print('dumpfmt:',dumpfmt)
+            print('norbs:',norbsfromrho)
+            print('nspin:',nspin)
+            print('natoms:',natoms)
+            print('time in fs:',time*au__to__fs)
+            print('dt in au:',dt)
             rho = np.fromfile(f,dtype='complex128',count=norbs*norbs)
     except IOError:
         print('File',rhofile,'not exist')
@@ -225,6 +223,7 @@ def getDensOnGrid(basis, box, nx, ny, nz, dx, dy, dz, rho, atomzs, coords, norbs
 
 def binToCube(ifr):
     rhofile = DUMPBIN_DIR+'{}ppdump.bin'.format(ifr)
+    print(rhofile)
     rhot = readRho(rhofile, norbs)
     denst = getDensOnGrid(basis, box, nx, ny, nz, dx, dy, dz, rhot, atomZ, myCoords, norbs, orbidx)
     # writes DENSITY DIFFERENCE to cubefile
@@ -260,10 +259,10 @@ print('list of frames',listofframes)
 #     for it, frameout in enumerate(executor.map(binToCube, listofframes)):
 #         print('Done frame',frameout)
 
-for it, frameout in enumerate(listofframes):
-    print('Starting', frameout)
-    binToCube(it)
-    print('Done frame', frameout)
+for frame in listofframes:
+    print('Starting', frame)
+    binToCube(frame)
+    print('Done frame', frame)
 
 
 print('Done.')

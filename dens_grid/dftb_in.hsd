@@ -1,66 +1,61 @@
- Geometry = GenFormat {
- <<< "geo_in.gen"
- }
- Driver = {}
-
-Hamiltonian = DFTB {
-  SCC = Yes
-  SCCTolerance = 1.0E-6
-  MaxSCCIterations = 1500
-  MaxAngularMomentum = {
-    Si = "p"
-    C = "p"
-    N = "p"
-    F = "p"
-    H = "s"
-  }
-    Filling = Fermi {
-    Temperature [K] = 0
-  }
-  ReadInitialCharges = No
-  SlaterKosterFiles = Type2FileNames {
-    Prefix = "~/dftb_skf/pbc-0-3/"
-    Separator = "-"
-    Suffix = ".skf"
-  }
-  Dispersion = LennardJones {
-    Parameters = UFFParameters{}
-  }
+Geometry = GenFormat {
+    <<< "coords.gen"
 }
 
- Options = {
- #  CalculateForces = Yes
- #  WriteAutotestTag = Yes 
-   WriteDetailedXML = Yes 
- #  WriteResultsTag = Yes 
- #  WriteDetailedOut = Yes
- #  WriteBandOut = Yes
- #  AtomResolvedEnergies = No
- #  RestartFrequency = 20
- #  RandomSeed = 0
- }
- ParserOptions = {
-   ParserVersion = 5
-   WriteHSDInput = Yes
-   WriteXMLInput = No
- #  StopAfterParsing = No
- }
- Analysis = {
-   WriteEigenvectors = Yes
-    ElectronDynamics = {
-      Steps = 1000
-      TimeStep [au] = 0.2
-      Populations = Yes
-      Perturbation = Laser {
-	PolarizationDirection = 0.59119755 0.80580867 -0.03402722
-        LaserEnergy [eV] = 2.39
-	}
-      EnvelopeShape = Sin2 {
-	Time1 [fs] = 20
-	}
-      FieldStrength [v/a] = 0.001
-      Pump = Yes
-      PumpProbeFrames = 10
+Driver = {}
+
+Hamiltonian = DFTB {
+    SCC = Yes
+    SCCTolerance = 1e-10  # Very tight for test purposes only
+    MaxAngularMomentum = {
+        Na = "p"
     }
- }
-  
+    SlaterKosterFiles = Type2FileNames {
+#        Prefix = {slakos/origin/ob2-1-1/shift/}
+         Prefix = "/Users/charly/SlaterKosterFiles/3ob-3-1/"
+#        Prefix = "../"
+        Separator = "-"
+        Suffix = ".skf"
+    }
+     SpinPolarisation = {}
+}
+
+
+Options {
+    WriteAutotestTag = Yes
+    WriteDetailedXML = Yes
+}
+
+ElectronDynamics = {
+  Steps = 20000
+  TimeStep [au] = 0.2
+  Perturbation = Laser {
+    PolarizationDirection = 1.0 0.0 0.0
+    LaserEnergy [eV] = 5.428158832797634892e-01
+  }
+  FieldStrength [v/a] = 0.001
+  EnvelopeShape = Sin2{
+	Time1 [fs] = 38.096
+	}
+#  IonDynamics = Yes
+#  InitialTemperature [k] = 0.0
+  Populations = Yes
+  Pump = Yes
+  PumpProbeFrames =  10
+  PumpProbeRange [fs] = 49 50
+}
+
+
+Analysis{
+WriteEigenvectors = Yes
+}
+
+InputVersion = 22.1
+
+
+Parallel {
+  # Allow OMP threads explicitely to test for hybrid parallelisation with
+  # MPI-binary. (Check the manual before using this in production runs!)
+  UseOmpThreads = Yes
+}
+
