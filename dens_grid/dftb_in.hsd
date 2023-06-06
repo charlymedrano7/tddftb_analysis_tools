@@ -42,7 +42,7 @@ ElectronDynamics = {
   Populations = Yes
   Pump = Yes
   PumpProbeFrames =  10
-  PumpProbeRange [fs] = 49 50
+  PumpProbeRange [fs] = 0 50
 }
 
 
