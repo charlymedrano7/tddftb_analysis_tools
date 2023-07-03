@@ -26,23 +26,23 @@ from ase.io import read
 
 
 #grid points
-nx = 48
-ny = 12
-nz = 12
+nx = 15
+ny = 15
+nz = 25
 
-iniframe = 5          #initial and final frames (depends on the dftb input)
-endframe = 5
+iniframe = 1          #initial and final frames (depends on the dftb input)
+endframe = 1
 frameinterval = 1     #interval of frames to take into account
 
 
-DUMPBIN_DIR = '../pump_frames/'  # directory where the *dump.bin files are located
+DUMPBIN_DIR = '../gold_wire2/laser/pump_frames/'  # directory where the *dump.bin files are located
 #CUBES_DIR = '.' # directory where the cubefiles will be stored
-CUBES_DIR = './cubes/' # directory where the cubefiles will be stored
+CUBES_DIR = './cubes_gold/' # directory where the cubefiles will be stored
 
-coordfile = '../geom.in.gen'  ## edit accordingly
+coordfile = '../gold_wire2/laser/coords.gen'  ## edit accordingly
 rhodumpfile = '0ppdump.bin' # *dump.bin file for step = 0 (ground state density), edit
 
-wfc_filename = 'wfc.3ob-3-1.hsd'
+wfc_filename = 'wfc.auorg-1-1.hsd'
 au__to__fs = 1/0.413413733365614E+02      ## from manual
 ang__to__bohr = 1./(constants.physical_constants['atomic unit of length'][0] * 1.0e10)
 ##########################################################
@@ -67,6 +67,7 @@ def getNorbs(atomzs, lmax):
     for iat in atomzs:
         for ll in range(lmax[iat]+1):
             norbs += orbs_per_l[ll]
+    print('Total number of orbitals: ', norbs)
     return norbs
 
 def readCoords(thisfile):     # This function use ASE
@@ -78,7 +79,8 @@ def readCoords(thisfile):     # This function use ASE
     pos = mol.get_positions() # [iat, idir]
     coords = np.transpose(pos)
     atomZ = mol.get_atomic_numbers()
-    return atomZ, np.array(coords)
+    print('atomZ: ', atomZ)
+    return atomZ, np.array(coords) * ang__to__bohr
 
 def readRho(rhofile, norbs):
     """
@@ -103,6 +105,7 @@ def readRho(rhofile, norbs):
     except IOError:
         print('File',rhofile,'not exist')
     rho = np.reshape(rho,(norbs,norbs))
+    print('trace of rho: ', np.trace(rho))
     return rho
 
 
@@ -158,9 +161,13 @@ def sto(z, l, r, nexp, ncoeff, exps, coeffs):
     in a certain position r
     """
     sto = 0.0
+    if (l==0 and r<np.finfo(np.float32).eps):
+        rtmp = 1.0
+    else:
+        rtmp = r**l
     for i in range(nexp[l]):
         for j in range(ncoeff[l]):
-            sto += coeffs[l][i][j] * r**(l+j-1) * np.exp(-exps[l][i] * r) #radial part
+            sto += coeffs[l][i][j] * rtmp * r**(j-1) * np.exp(-exps[l][i] * r) #radial part
     return sto
 
 #@jit(nopython=True)
@@ -173,6 +180,10 @@ def Rty(n, m, coord, rr):
     yy = coord[1]
     zz = coord[2]
     #Tabulated spherical harmonics (find reference)
+    if (rr < np.finfo(np.float32).eps and n != 0):
+        rty = 0.0
+        print('Rty EQUAL ZERO')
+        return rty
     if n == 0:
         rty = 0.2820947917738782
     if n == 1:
@@ -221,10 +232,11 @@ def fillVectorAtR(atomzs, coords, rx, ry, rz, lmax, cutoff, nexp, ncoeff, exps, 
             idx = 0
             for ll in range(lmax[atz] + 1):
                 for mm in range(-ll, ll + 1):
-                    if rrmod[iat] > 1e-1:
-                        eval_wfc_sto = sto(atz, ll, rrmod[iat], nexp[atz], ncoeff[atz], exps[atz], coeffs[atz])
-                    else:
-                        eval_wfc_sto = 0.0        #To avoid divergence near the nucleus
+#                    if rrmod[iat] > 1e-6:
+                    eval_wfc_sto = sto(atz, ll, rrmod[iat], nexp[atz], ncoeff[atz], exps[atz], coeffs[atz])
+#                    else:
+#                        print("r too close, eval will be zero")
+#                        eval_wfc_sto = 1.0        #To avoid divergence near the nucleus
                     eval_wfc = eval_wfc_sto * Rty(ll, mm, rr[:,iat], rrmod[iat])
 #                    if eval_wfc > 3 or eval_wfc < -3:
 #                        print(" ")
@@ -246,15 +258,18 @@ def fillVectorAtR(atomzs, coords, rx, ry, rz, lmax, cutoff, nexp, ncoeff, exps, 
 
 def calculateDensity(rho, atomsz, coords, xx, yy, zz, lmax, cutoff, nexp, ncoeff, exps, coeffs, norbs, orbidx):
     vec1 = fillVectorAtR(atomsz, coords, xx, yy, zz, lmax, cutoff, nexp, ncoeff, exps, coeffs, norbs, orbidx)
+#    print('shape of vec1: ', vec1.shape)
     dens = np.dot(np.dot(rho, vec1), vec1)
-    if dens.real > 200:
-        print(" ")
-        print("************* TESTING DENSITY ***********")
-        print("density value:", dens.real)
-        print("max value of rho:", np.max(rho))
-        print("min value of rho:", np.min(rho))
-        print("vector 1")
-        print(vec1)
+#    print('shape of dens: ', dens.shape)
+#    if dens.real > 0.5:
+#        print(" ")
+#        print("************* TESTING DENSITY ***********")
+#        print("density value:", dens.real)
+#        print("max value of rho:", np.max(rho))
+#        print("min value of rho:", np.min(rho))
+#        print("vector 1")
+#        print(vec1)
+#        dens = 0.0+0.0j
     return dens.real
 
 
@@ -269,6 +284,16 @@ def getDensOnGrid(basis, box, nx, ny, nz, dx, dy, dz, rho, atomzs, coords, norbs
                 dens[ix, iy, iz] = calculateDensity(rho, atomzs, coords, xx, yy, zz, basis.lmax, \
                                                     basis.cutoff, basis.nexp, basis.ncoeff, \
                                                     basis.exps, basis.coeffs, norbs, orbidx)
+                
+                if dens[ix,iy,iz] > 0.5:
+                    print(" ")
+                    print("************* TESTING DENSITY ***********")
+                    print("density value:", dens[ix,iy,iz])
+                    print("X:", xx)
+                    print("Y:", yy)
+                    print("Z:", zz)
+                    dens[ix, iy, iz] = 0.0
+    print('basis.cutoff: ', basis.cutoff)
     return dens
 
 def binToCube(ifr):
@@ -289,7 +314,8 @@ box = getBox(myCoords)                    #create the box for the density calcul
 dx = (box[0][1]-box[0][0])/float(nx)      #deltas in x, y, z based on the box dimension
 dy = (box[1][1]-box[1][0])/float(ny)      #and the grid points
 dz = (box[2][1]-box[2][0])/float(nz)
-dV = dx*(ang__to__bohr)*dy*(ang__to__bohr)*dz*(ang__to__bohr) #delta Volume in bohr^3
+#dV = dx*(ang__to__bohr)*dy*(ang__to__bohr)*dz*(ang__to__bohr) #delta Volume in bohr^3
+dV2 = dx*dy*dz #delta Volume
 print("dx ", dx)
 print("dy ", dy)
 print("dz ", dz)
@@ -306,8 +332,11 @@ inidens = getDensOnGrid(basis, box, nx, ny, nz, dx, dy, dz, rho0, atomZ, myCoord
 
 writeCube(CUBES_DIR+'inidens.cube', inidens, natoms, box, nx, ny, nz, dx, dy, dz, atomZ, myCoords, ang__to__bohr)
 print('Done initial density')
-print('Number of electrons:', np.sum(inidens)*dV)
-print('i Volume:', dV)
+print('Number of electrons:', (np.sum(inidens))*dV2)
+print('i Volume:', dV2)
+#print('        ')
+#print('Number of electrons with other V:', np.sum(inidens)*dV2)
+#print('i Volume:', dV2)
 
 
 listofframes = list(range(iniframe, endframe+1, frameinterval))
