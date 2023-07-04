@@ -28,7 +28,7 @@ from ase.io import read
 #grid points
 nx = 15
 ny = 15
-nz = 25
+nz = 60
 
 iniframe = 1          #initial and final frames (depends on the dftb input)
 endframe = 1
@@ -37,7 +37,7 @@ frameinterval = 1     #interval of frames to take into account
 
 DUMPBIN_DIR = '../gold_wire2/laser/pump_frames/'  # directory where the *dump.bin files are located
 #CUBES_DIR = '.' # directory where the cubefiles will be stored
-CUBES_DIR = './cubes_gold/' # directory where the cubefiles will be stored
+CUBES_DIR = './cubes_gold2/' # directory where the cubefiles will be stored
 
 coordfile = '../gold_wire2/laser/coords.gen'  ## edit accordingly
 rhodumpfile = '0ppdump.bin' # *dump.bin file for step = 0 (ground state density), edit
@@ -73,7 +73,7 @@ def getNorbs(atomzs, lmax):
 def readCoords(thisfile):     # This function use ASE
     """
     This function read the coord.gen file to get and return the atomic positions
-    and the atomic numbers.
+    and the atomic numbers. It returns the coordinates in Bohr units
     """
     mol = read(thisfile)        
     pos = mol.get_positions() # [iat, idir]
@@ -114,14 +114,14 @@ def writeCube(cubefile, dens, natoms, box, nx, ny, nz, dx, dy, dz, atomZ, coords
     with open(cubefile, 'w') as cubout:
         cubout.write('Density generated from density matrix calculated by DFTB+ \n')
         cubout.write('Frame = 0 (Ground state) \n')
-        cubout.write('{}   {:.3f}  {:.3f}  {:.3f}\n'.format(natoms, box[0][0]*ang__to__bohr, 
-                                                          box[1][0]*ang__to__bohr, box[2][0]*ang__to__bohr))
-        cubout.write('{}   {:.3f}  {:.3f}  {:.3f}\n'.format(nx, dx*ang__to__bohr, 0., 0.))
-        cubout.write('{}   {:.3f}  {:.3f}  {:.3f}\n'.format(ny, 0., dy*ang__to__bohr, 0.))
-        cubout.write('{}   {:.3f}  {:.3f}  {:.3f}\n'.format(nz, 0., 0., dz*ang__to__bohr))
+        cubout.write('{}   {:.3f}  {:.3f}  {:.3f}\n'.format(natoms, box[0][0], 
+                                                          box[1][0], box[2][0]))
+        cubout.write('{}   {:.3f}  {:.3f}  {:.3f}\n'.format(nx, dx, 0., 0.))
+        cubout.write('{}   {:.3f}  {:.3f}  {:.3f}\n'.format(ny, 0., dy, 0.))
+        cubout.write('{}   {:.3f}  {:.3f}  {:.3f}\n'.format(nz, 0., 0., dz))
         for iat in range(natoms):
             cubout.write('{}   {:.3f}  {:.3f}  {:.3f}  {:.3f}\n'.format(
-                atomZ[iat], 0., coords[0,iat]*ang__to__bohr, coords[1,iat]*ang__to__bohr, coords[2,iat]*ang__to__bohr))
+                atomZ[iat], 0., coords[0,iat], coords[1,iat], coords[2,iat]))
         for ix in range(nx):
             for iy in range(ny):
                 for iz in range(nz):
@@ -158,10 +158,10 @@ def getBox(coords):
 def sto(z, l, r, nexp, ncoeff, exps, coeffs):
     """
     This function calculate the radial part of the wavefunction 
-    in a certain position r
+    in a certain distance r
     """
     sto = 0.0
-    if (l==0 and r<np.finfo(np.float32).eps):
+    if (l == 0 and r < np.finfo(np.float32).eps): #for s orbitals to avoid 0.0^0
         rtmp = 1.0
     else:
         rtmp = r**l
@@ -176,11 +176,11 @@ def Rty(n, m, coord, rr):
     This function calculate the angular part of the wavefunction
     with spherical harmonics in a certain position rr
     """
-    xx = coord[0]
-    yy = coord[1]
+    xx = coord[0]      #X,Y,Z components of the vector from the grid point to an specific atom. 
+    yy = coord[1]      #rr is the modulus previously calculated
     zz = coord[2]
     #Tabulated spherical harmonics (find reference)
-    if (rr < np.finfo(np.float32).eps and n != 0):
+    if (rr < np.finfo(np.float32).eps and n != 0):  #if rr is near to zero the funtion brakes for n /= 0
         rty = 0.0
         print('Rty EQUAL ZERO')
         return rty
@@ -224,33 +224,16 @@ def Rty(n, m, coord, rr):
 
 def fillVectorAtR(atomzs, coords, rx, ry, rz, lmax, cutoff, nexp, ncoeff, exps, coeffs, norbs, orbidx):
     vec = np.zeros(norbs)
-    rrorig = np.array([rx,ry,rz])
-    rr = rrorig[:,None] - coords
-    rrmod = np.linalg.norm(rr, axis=0)
-    for iat, atz in enumerate(atomzs):
-        if rrmod[iat] < cutoff[atz][0]: #taking the l=0 since cutoff is the same for all l
+    rrorig = np.array([rx,ry,rz])       #vector to the grid point of interest
+    rr = rrorig[:,None] - coords        #array of vectors containing the rr distance to each atom
+    rrmod = np.linalg.norm(rr, axis=0)  #rrmod contains de module, hence the distance from the grid point to the atom  
+    for iat, atz in enumerate(atomzs):  #loop over the atoms taking into account the element nature          
+        if rrmod[iat] < cutoff[atz][0]: #if rrmod is within the cutoff. It takes the l=0 since cutoff is the same for all l
             idx = 0
-            for ll in range(lmax[atz] + 1):
-                for mm in range(-ll, ll + 1):
-#                    if rrmod[iat] > 1e-6:
+            for ll in range(lmax[atz] + 1):     #loops over l and m to evaluate the radial and angular part   
+                for mm in range(-ll, ll + 1):            
                     eval_wfc_sto = sto(atz, ll, rrmod[iat], nexp[atz], ncoeff[atz], exps[atz], coeffs[atz])
-#                    else:
-#                        print("r too close, eval will be zero")
-#                        eval_wfc_sto = 1.0        #To avoid divergence near the nucleus
                     eval_wfc = eval_wfc_sto * Rty(ll, mm, rr[:,iat], rrmod[iat])
-#                    if eval_wfc > 3 or eval_wfc < -3:
-#                        print(" ")
-#                        print("************* TESTING VECTOR1 ***********")
-#                        print("eval_wfc: ", eval_wfc)
-#                        print(" ")
-#                        print("eval_wfc_sto: ", eval_wfc_sto)
-#                        print(" ")
-#                        print("Position: ", rr)
-#                        print(" ")
-#                        print("Modulus distance: ", rrmod[iat])
-#                       print(" ")
-#                       print("Origin position: ", rrorig)
-#                       print(" ")
                     vec[orbidx[iat]+idx] = eval_wfc
                 idx += 1
     return vec
@@ -258,18 +241,7 @@ def fillVectorAtR(atomzs, coords, rx, ry, rz, lmax, cutoff, nexp, ncoeff, exps, 
 
 def calculateDensity(rho, atomsz, coords, xx, yy, zz, lmax, cutoff, nexp, ncoeff, exps, coeffs, norbs, orbidx):
     vec1 = fillVectorAtR(atomsz, coords, xx, yy, zz, lmax, cutoff, nexp, ncoeff, exps, coeffs, norbs, orbidx)
-#    print('shape of vec1: ', vec1.shape)
     dens = np.dot(np.dot(rho, vec1), vec1)
-#    print('shape of dens: ', dens.shape)
-#    if dens.real > 0.5:
-#        print(" ")
-#        print("************* TESTING DENSITY ***********")
-#        print("density value:", dens.real)
-#        print("max value of rho:", np.max(rho))
-#        print("min value of rho:", np.min(rho))
-#        print("vector 1")
-#        print(vec1)
-#        dens = 0.0+0.0j
     return dens.real
 
 
@@ -278,9 +250,9 @@ def getDensOnGrid(basis, box, nx, ny, nz, dx, dy, dz, rho, atomzs, coords, norbs
     for ix in range(nx):
         for iy in range(ny):
             for iz in range(nz):
-                xx = box[0][0] + ix * dx
-                yy = box[1][0] + iy * dy
-                zz = box[2][0] + iz * dz
+                xx = box[0][0] + ix * dx    #x coordinate of grid point
+                yy = box[1][0] + iy * dy    #y coordinate of grid point
+                zz = box[2][0] + iz * dz    #z coordinate of grid point
                 dens[ix, iy, iz] = calculateDensity(rho, atomzs, coords, xx, yy, zz, basis.lmax, \
                                                     basis.cutoff, basis.nexp, basis.ncoeff, \
                                                     basis.exps, basis.coeffs, norbs, orbidx)
@@ -293,7 +265,7 @@ def getDensOnGrid(basis, box, nx, ny, nz, dx, dy, dz, rho, atomzs, coords, norbs
                     print("Y:", yy)
                     print("Z:", zz)
                     dens[ix, iy, iz] = 0.0
-    print('basis.cutoff: ', basis.cutoff)
+#    print('basis.cutoff: ', basis.cutoff)
     return dens
 
 def binToCube(ifr):
