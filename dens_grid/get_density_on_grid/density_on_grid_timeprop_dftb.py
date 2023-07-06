@@ -26,23 +26,23 @@ from ase.io import read
 
 
 #grid points
-nx = 15
+nx = 60
 ny = 15
-nz = 60
+nz = 15
 
 iniframe = 1          #initial and final frames (depends on the dftb input)
 endframe = 1
 frameinterval = 1     #interval of frames to take into account
 
 
-DUMPBIN_DIR = '../gold_wire2/laser/pump_frames/'  # directory where the *dump.bin files are located
+DUMPBIN_DIR = '../sodium_wire2/pump_frames/'  # directory where the *dump.bin files are located
 #CUBES_DIR = '.' # directory where the cubefiles will be stored
-CUBES_DIR = './cubes_gold2/' # directory where the cubefiles will be stored
+CUBES_DIR = './cubes_sodium2/' # directory where the cubefiles will be stored
 
-coordfile = '../gold_wire2/laser/coords.gen'  ## edit accordingly
+coordfile = '../sodium_wire2/coords.gen'  ## edit accordingly
 rhodumpfile = '0ppdump.bin' # *dump.bin file for step = 0 (ground state density), edit
 
-wfc_filename = 'wfc.auorg-1-1.hsd'
+wfc_filename = 'wfc.3ob-3-1.hsd'
 au__to__fs = 1/0.413413733365614E+02      ## from manual
 ang__to__bohr = 1./(constants.physical_constants['atomic unit of length'][0] * 1.0e10)
 ##########################################################
@@ -146,7 +146,7 @@ def getBox(coords):
     This function construct a box for the calculation of the charge density
     based on the min and max values of the X,Y and Z coordinates of the system.
     """
-    bspace = 3.5
+    bspace = 9
     box = []
     box.append([min(coords[0,:])-bspace, max(coords[0,:])+bspace])
     box.append([min(coords[1,:])-bspace, max(coords[1,:])+bspace])

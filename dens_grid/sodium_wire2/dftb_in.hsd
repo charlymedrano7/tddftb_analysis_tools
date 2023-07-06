@@ -1,0 +1,62 @@
+Geometry = GenFormat {
+    <<< "coords.gen"
+}
+
+Driver = {}
+
+Hamiltonian = DFTB {
+    SCC = Yes
+    SCCTolerance = 1e-10  # 
+    MaxAngularMomentum = {
+        Na = "p"
+    }
+    SlaterKosterFiles = Type2FileNames {
+#        Prefix = {slakos/origin/ob2-1-1/shift/}
+#         Prefix = "/home/users/cpoidevin/3ob-3-1/"
+         Prefix = "/Users/charly/SlaterKosterFiles/3ob-3-1/"
+#        Prefix = "../"
+        Separator = "-"
+        Suffix = ".skf"
+    }
+     SpinPolarisation = {}
+}
+
+
+Options {
+    WriteAutotestTag = Yes
+    WriteDetailedXML = Yes
+}
+
+ElectronDynamics = {
+  Steps = 20000
+  TimeStep [au] = 0.2
+  Perturbation = Laser {
+    PolarizationDirection = 1.0 0.0 0.0
+    LaserEnergy [eV] = 5.428158832797634892e-01
+  }
+  FieldStrength [v/a] = 0.010
+  EnvelopeShape = Sin2{
+	Time1 [fs] = 38.096
+	}
+#  IonDynamics = Yes
+#  InitialTemperature [k] = 0.0
+  Populations = Yes
+  Pump = Yes
+  PumpProbeFrames =  5
+  PumpProbeRange [fs] = 0 50
+}
+
+
+Analysis{
+WriteEigenvectors = Yes
+}
+
+InputVersion = 22.2
+
+
+Parallel {
+  # Allow OMP threads explicitely to test for hybrid parallelisation with
+  # MPI-binary. (Check the manual before using this in production runs!)
+  UseOmpThreads = Yes
+}
+
